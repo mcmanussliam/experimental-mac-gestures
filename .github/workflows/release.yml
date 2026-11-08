@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        run: make test
+
+      - name: Bundle app
+        run: VERSION="${GITHUB_REF_NAME#v}" ./scripts/bundle.sh
+
+      - name: Package
+        run: ditto -c -k --keepParent build/Gesture.app "Gesture-${GITHUB_REF_NAME}.zip"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "Gesture-${GITHUB_REF_NAME}.zip" --generate-notes --prerelease
